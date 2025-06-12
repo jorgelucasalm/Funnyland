@@ -8,18 +8,12 @@ public class Lava : MonoBehaviour
     {
         if (collision.gameObject.tag == "Player")
         {
-            collision.gameObject.GetComponent<Animator>().SetTrigger("Dead");
-            collision.gameObject.GetComponent<Rigidbody2D>().linearVelocity = Vector3.zero;
-            collision.gameObject.GetComponent<CapsuleCollider2D>().enabled = false;
-            collision.gameObject.GetComponent<Rigidbody2D>().bodyType = RigidbodyType2D.Kinematic;
-            collision.gameObject.GetComponent<Movimento>().enabled = false;
-            collision.gameObject.GetComponent<Animator>().SetBool("saltando", false);
-            Invoke("LoadScene", 1f);
+            PlayerLife playerLife = collision.gameObject.GetComponent<PlayerLife>();
+            if (playerLife != null)
+            {
+                playerLife.Death();
+                playerLife.vida = 0;
+            }
         }
-    }
-
-    void LoadScene()
-    {
-        SceneManager.LoadScene("Fase-1");
     }
 }

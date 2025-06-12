@@ -35,7 +35,7 @@ public class Timer : MonoBehaviour
         if (timeCount <= 0)
         {
             timeCount = 0;
-            GameObject.Find("Player").GetComponent<Movimento>().Death();
+            GameObject.FindWithTag("Player").GetComponent<PlayerLife>().Death();
             timeOver = true;
         }
         RefreshScreen();

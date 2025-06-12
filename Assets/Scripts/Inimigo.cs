@@ -1,5 +1,5 @@
 using UnityEngine;
-public class Inimigo : MonoBehaviour
+public class Inimigo : InimigoBase
 {
     public float speed;
     private bool isGrounded = true;
@@ -32,16 +32,6 @@ public class Inimigo : MonoBehaviour
         Vector3 localScale = transform.localScale;
         localScale.x *= -1;
         transform.localScale = localScale;
-    }
-
-
-
-    private void OnCollisionEnter2D(Collision2D collision)
-    {
-        if (collision.gameObject.tag == "Player")
-        {
-            GameObject.Find("Player").GetComponent<Movimento>().Death();
-        }
     }
 
 }
