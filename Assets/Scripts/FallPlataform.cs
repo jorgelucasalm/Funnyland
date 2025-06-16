@@ -6,11 +6,32 @@ public class FallPlataform : MonoBehaviour
     private Coroutine fallCoroutine;
     private Rigidbody2D rb;
 
+    private Vector3 initialPosition;
+    private Quaternion initialRotation;
+    private RigidbodyType2D initialBodyType;
+
     void Start()
     {
-        rb = GetComponent<Rigidbody2D>(); // Corrige a referência
-        rb.bodyType = RigidbodyType2D.Kinematic; // Inicialmente imóvel
-        rb.gravityScale = 1f; // Ajuste conforme necessário
+        rb = GetComponent<Rigidbody2D>();
+        rb.bodyType = RigidbodyType2D.Kinematic;
+        rb.gravityScale = 1f;
+
+        // Salva o estado original
+        initialPosition = transform.position;
+        initialRotation = transform.rotation;
+        initialBodyType = rb.bodyType;
+    }
+
+    public void ResetToOriginalState()
+    {
+        // Restaura posição e rotação
+        transform.position = initialPosition;
+        transform.rotation = initialRotation;
+
+        // Restaura Rigidbody2D
+        rb.bodyType = initialBodyType;
+        rb.linearVelocity = Vector2.zero;
+        rb.angularVelocity = 0f;
     }
 
     private void OnCollisionEnter2D(Collision2D collision)

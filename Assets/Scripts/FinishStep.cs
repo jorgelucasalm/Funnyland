@@ -5,7 +5,7 @@ public class FinishStep : MonoBehaviour
 {
     public GameObject textFinish;
     public AudioClip finishSound;
-    private AudioSource audioSource;
+    // private AudioSource audioSource;
 
     private void Start()
     {
@@ -15,11 +15,12 @@ public class FinishStep : MonoBehaviour
     private void OnTriggerEnter2D(Collider2D collision)
     {
         if (collision.gameObject.CompareTag("Player"))
-        {
-            GameObject.FindGameObjectWithTag("GameController").GetComponent<AudioSource>().Stop();
+        {// Para parar o som do player:
+            GameObject.FindGameObjectWithTag("Player").GetComponent<AudioSource>().Stop();
+
+            // Para tocar o som deste componente:
+            GetComponent<AudioSource>().PlayOneShot(finishSound);
             textFinish.SetActive(true);
-            GetComponent<AudioSource>().clip = finishSound;
-            GetComponent<AudioSource>().Play();
             Time.timeScale = 0f; // Pauses or resumes the game
         }
     }

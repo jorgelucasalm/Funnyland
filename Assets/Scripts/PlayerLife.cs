@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using System.Collections;
+using System.Linq;
 
 public class PlayerLife : MonoBehaviour
 {
@@ -17,8 +18,10 @@ public class PlayerLife : MonoBehaviour
     public float blinkInterval = 0.1f;
     private bool isInvulnerable = false;
     private SpriteRenderer spriteRenderer;
-    
+
+
     public AudioClip deathAudio;
+    public AudioClip lifeAudio;
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
@@ -30,6 +33,28 @@ public class PlayerLife : MonoBehaviour
     void Update()
     {
         HealthLogic();
+        if (isInvulnerable)
+        {
+            GameObject[] inimigos = GameObject.FindGameObjectsWithTag("Enemy");
+            foreach (GameObject inimigo in inimigos)
+            {
+                // Exemplo: desabilitar o collider
+                Collider2D col = inimigo.GetComponent<Collider2D>();
+                if (col != null)
+                    col.enabled = false;
+            }
+        }
+        if (!isInvulnerable)
+        {
+            GameObject[] inimigos = GameObject.FindGameObjectsWithTag("Enemy");
+            foreach (GameObject inimigo in inimigos)
+            {
+                // Exemplo: desabilitar o collider
+                Collider2D col = inimigo.GetComponent<Collider2D>();
+                if (col != null)
+                    col.enabled = true;
+            }
+        }
     }
 
     void HealthLogic()
@@ -61,24 +86,41 @@ public class PlayerLife : MonoBehaviour
     {
         isInvulnerable = true;
 
-        float timer = 0f;
-
-        while (timer < invulnerableTime)
+        // Efeito visual opcional: piscar
+        float elapsed = 0f;
+        while (elapsed < invulnerableTime)
         {
-            spriteRenderer.enabled = !spriteRenderer.enabled; // pisca
+            spriteRenderer.enabled = !spriteRenderer.enabled;
             yield return new WaitForSeconds(blinkInterval);
-            timer += blinkInterval;
+            elapsed += blinkInterval;
         }
+        spriteRenderer.enabled = true;
 
-        spriteRenderer.enabled = true; // garante que fique visível
         isInvulnerable = false;
+    }
+
+    // No método de dano (exemplo em OnCollisionEnter2D ou LoseLife):
+    private void OnTriggerEnter2D(Collision2D collision)
+    {
+        if (collision.gameObject.CompareTag("Enemy") && !isInvulnerable)
+        {
+            LoseLife();
+        }
     }
 
     public void GainLife()
     {
         if (vida < vidaMaxima)
         {
+            float originalVolume = GetComponent<Player>().audioS.volume;
+
+            lifeAudio = GetComponent<Player>().Sounds[4];
+            GetComponent<Player>().audioS.clip = lifeAudio;
+            GetComponent<Player>().audioS.volume = 1.0f;
+            GetComponent<Player>().audioS.Play();
+
             vida++;
+            StartCoroutine(RestoreVolumeAfter(GetComponent<Player>().audioS, originalVolume, lifeAudio.length));
             Debug.Log("Vida aumentada! Vida atual: " + vida);
         }
         else
@@ -87,18 +129,16 @@ public class PlayerLife : MonoBehaviour
         }
     }
 
+    private IEnumerator RestoreVolumeAfter(AudioSource source, float volume, float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        source.volume = volume;
+    }
+
     public void LoseLife()
     {
         if (!isInvulnerable)
         {
-            // Aplique dano aqui (ex: reduzir vida)
-            Debug.Log("Tomou dano!");
-            deathAudio = GetComponent<Player>().Sounds[1];
-            GetComponent<Player>().audioS.clip = deathAudio;
-            GetComponent<Player>().audioS.Play();
-
-            // Inicia invulnerabilidade
-            StartCoroutine(Invulnerability());
             vida--;
             if (vida == 0)
             {
@@ -109,13 +149,27 @@ public class PlayerLife : MonoBehaviour
             }
             else
             {
-                Debug.Log("Player is taking damage.");
+                // Aplique dano aqui (ex: reduzir vida)
+                deathAudio = GetComponent<Player>().Sounds[1];
+                GetComponent<Player>().audioS.clip = deathAudio;
+                GetComponent<Player>().audioS.Play();
+
+                FallPlataform[] plataformas = FindObjectsOfType<FallPlataform>();
+                foreach (FallPlataform plataforma in plataformas)
+                {
+                    plataforma.ResetToOriginalState();
+                }
+
+                // Inicia invulnerabilidade
+                StartCoroutine(Invulnerability());
             }
         }
     }
 
     public void Death()
     {
+        Debug.Log("Game Over");
+        GetComponent<Animator>().SetTrigger("Dead");
         deathAudio = GetComponent<Player>().Sounds[3];
         GetComponent<Player>().audioS.clip = deathAudio;
         GetComponent<Player>().audioS.Play();
@@ -123,14 +177,10 @@ public class PlayerLife : MonoBehaviour
         alive = false;
         GetComponent<Rigidbody2D>().linearVelocity = Vector2.zero;
         GetComponent<Rigidbody2D>().bodyType = RigidbodyType2D.Kinematic;
-        GetComponent<CapsuleCollider2D>().enabled = false;
-        GetComponent<Player>().enabled = false;
-        GetComponent<Animator>().SetTrigger("Dead");
+        // GetComponent<Player>().enabled = false;
         GetComponent<Animator>().SetBool("saltando", false);
-        Debug.Log("Game Over");
         GetComponent<Player>().Lives = 0;
         Object.FindFirstObjectByType<PauseMenu>().DeathMenu();
-        
     }
 
 }

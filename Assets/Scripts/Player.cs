@@ -12,6 +12,9 @@ public class Player : MonoBehaviour
     [SerializeField] private int speed = 5;
 
     [SerializeField] private Transform pePersonagem;
+    // Defina os valores conforme necessário
+    public float largura;
+    public float altura;
     [SerializeField] private LayerMask chaoLayer;
 
     private bool isGrounded;
@@ -29,19 +32,27 @@ public class Player : MonoBehaviour
     public AudioSource audioS;
     public AudioClip[] Sounds;
 
+    private Vector2 respawnPoint;
+
     private void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
         animator = GetComponent<Animator>();
         spriteRenderer = GetComponent<SpriteRenderer>();
+        SetCheckpoint(transform.position); // Salva o ponto de respawn inicial
+    }
 
+    void OnDrawGizmosSelected()
+    {
+        Gizmos.color = Color.red;
+        Gizmos.DrawWireCube(pePersonagem.position, new Vector3(largura, altura, 0));
     }
 
     // Update is called once per frame
     void Update()
     {
         horizontalInput = Input.GetAxis("Horizontal");
-        isGrounded = Physics2D.OverlapCircle(pePersonagem.position, 0.2f, chaoLayer);
+        isGrounded = Physics2D.OverlapBox(pePersonagem.position, new Vector2(largura, altura), 0f, chaoLayer);
         animator.SetBool(movendoHash, horizontalInput != 0);
         animator.SetBool(saltandoHash, !isGrounded);
 
@@ -92,22 +103,43 @@ public class Player : MonoBehaviour
         rb.linearVelocity = new Vector2(horizontalInput * speed, rb.linearVelocity.y);
     }
 
+    public void SetCheckpoint(Vector2 point)
+    {
+        respawnPoint = point;
+        Debug.Log("Checkpoint salvo: " + point);
+    }
+
+    public void Respawn()
+    {
+        transform.position = respawnPoint;
+        // Resetar vida, animação ou efeitos se necessário
+    }
+
     // This method is called when the collider other enters the trigger
     private void OnTriggerEnter2D(Collider2D collision)
     {
         if (collision.gameObject.tag == "Enemy")
         {
-            Debug.Log("Colidiu com inimigo");
-            rb.linearVelocity = Vector2.zero;
-            rb.AddForce(Vector2.up * 5, ForceMode2D.Impulse);
-            collision.gameObject.GetComponent<Animator>().SetTrigger("Death");
-            collision.gameObject.GetComponent<Inimigo>().enabled = false;
-            collision.gameObject.GetComponent<CapsuleCollider2D>().enabled = false;
-            collision.gameObject.GetComponent<BoxCollider2D>().enabled = false;
-            collision.gameObject.GetComponent<Rigidbody2D>().bodyType = RigidbodyType2D.Kinematic;
-            audioS.clip = Sounds[1];
-            audioS.Play();
-            Destroy(collision.gameObject, 1f);
+            // Se o personagem está caindo (pulando sobre o inimigo)
+            if (rb.linearVelocity.y < 0)
+            {
+                // Mata o inimigo
+                collision.gameObject.GetComponent<CapsuleCollider2D>().enabled = false;
+                collision.gameObject.GetComponent<BoxCollider2D>().enabled = false;
+                collision.gameObject.GetComponent<Rigidbody2D>().bodyType = RigidbodyType2D.Kinematic;
+                Debug.Log("Colidiu com inimigo por cima");
+                rb.linearVelocity = new Vector2(rb.linearVelocity.x, 0); // Zera Y antes do impulso
+                rb.AddForce(Vector2.up * 5, ForceMode2D.Impulse);
+                collision.gameObject.GetComponent<Animator>().SetTrigger("Death");
+                audioS.clip = Sounds[1];
+                audioS.Play();
+                Destroy(collision.gameObject, 0.4f); // Dá tempo do som/anim tocar
+            }
+            else
+            {
+                // O personagem leva dano
+                GetComponent<PlayerLife>().LoseLife();
+            }
         }
         if (collision.gameObject.tag == "Plataform")
         {
@@ -118,10 +150,9 @@ public class Player : MonoBehaviour
             Destroy(collision.gameObject);
             Cherries++;
             cherriesText.text = Cherries.ToString();
-            if (Cherries >= 2)
+            if (Cherries % 2 == 0 && Cherries > 0)
             {
                 GetComponent<PlayerLife>().GainLife();
-                Cherries = 0; // Reseta as cerejas após ganhar vida
             }
         }
     }
